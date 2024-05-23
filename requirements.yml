@@ -1,0 +1,22 @@
+---
+roles:
+  - name: cloudalchemy.alertmanager
+  - name: cloudalchemy.blackbox-exporter
+  - name: cloudalchemy.grafana
+  - name: cloudalchemy.node_exporter
+  - name: cloudalchemy.prometheus
+  - name: cloudalchemy.snmp-exporter
+  - name: geerlingguy.docker
+  - name: geerlingguy.java
+  - name: githubixx.ansible_role_wireguard
+    src: https://github.com/githubixx/ansible-role-wireguard.git
+    version: 15.0.0
+
+collections:
+  - name: community.docker
+  - name: community.general
+  - name: community.windows
+  - name: cisco.meraki
+  - name: https://github.com/grafana/grafana-ansible-collection.git
+    type: git
+    version: 9adac68969f4f506997b93fc8d11dc6b5f8ce957

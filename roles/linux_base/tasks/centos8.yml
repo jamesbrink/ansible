@@ -1,0 +1,49 @@
+---
+- name: EPEL Repository
+  ansible.builtin.yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/Everything/$basearch
+    gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+    gpgcheck: true
+
+- name: Checking if reboot is needed
+  ansible.builtin.shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
+  ignore_errors: true
+  register: reboot_hint
+
+- name: Rebooting
+  ansible.builtin.reboot:
+  when: reboot_hint.stdout.find("reboot") != -1 
+
+- name: Base packages
+  ansible.builtin.yum:
+    name: "{{ packages }}"
+    state: latest # noqa package-latest
+  vars:
+    packages:
+      - bzip2
+      - chrony
+      - cloud-utils-growpart
+      - genisoimage
+      - git
+      - htop
+      - iperf3
+      - iptables-services
+      - jq
+      - nfs-utils
+      - nginx
+      - postgresql
+      - python3-libselinux
+      - python3-pip
+      - tmux
+      - vim
+      - wget
+      - wireguard-tools
+      - xterm
+
+- name: Enable rngd (Entropy) service
+  ansible.builtin.systemd:
+    name: rngd.service
+    state: restarted
+    enabled: true

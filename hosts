@@ -1,0 +1,7 @@
+---
+all:
+  children:
+    lab:
+      hosts:
+        n100:
+          ansibible_host: n100

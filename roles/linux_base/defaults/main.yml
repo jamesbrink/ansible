@@ -1,0 +1,3 @@
+---
+linux_base_allow_reboot: true
+linux_base_timezone: America/Phoenix

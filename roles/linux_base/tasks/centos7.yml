@@ -1,0 +1,118 @@
+---
+- name: Find Interface Config Files
+  ansible.builtin.find:
+    paths: /etc/sysconfig/network-scripts/
+    patterns: 'ifcfg-*'
+  register: ifcfg_files
+  tags:
+    - dns
+    - network
+
+- name: Ensure Iterface Configs Are Not Managed by NetworkManager
+  ansible.builtin.lineinfile:
+    path: "{{ item.path }}"
+    regexp: '^NM_CONTROLLED='
+    line: NM_CONTROLLED=no
+  with_items: "{{ ifcfg_files.files }}"
+
+- name: Ensure Search Domain Entry in Interface Configs
+  ansible.builtin.lineinfile:
+    path: "{{ item.path }}"
+    regexp: '^DOMAIN='
+    line: "DOMAIN={{ search_domains }}"
+  with_items: "{{ ifcfg_files.files }}"
+
+- name: Ensure PackageKit is not installed
+  ansible.builtin.yum:
+    name: PackageKit
+    state: absent
+
+- name: Ensure NetworkManager Is Disabled
+  ansible.builtin.systemd:
+    name: NetworkManager
+    state: stopped
+    enabled: false
+    masked: true
+  ignore_errors: true
+
+- name: Ensure network.service is Enabled
+  ansible.builtin.systemd:
+    name: network.service
+    state: restarted
+    enabled: true
+  tags:
+    - network
+
+- name: Upgrade All Packages
+  ansible.builtin.yum:
+    name: "*"
+    state: latest # noqa package-latest
+    skip_broken: true
+
+- name: Checking if reboot is needed
+  ansible.builtin.shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
+  ignore_errors: true
+  register: reboot_hint
+
+- name: Rebooting
+  ansible.builtin.reboot:
+  ignore_errors: true
+  when: reboot_hint.stdout.find("reboot") != -1
+
+- name: EPEL Repository
+  ansible.builtin.yum_repository:
+    name: epel
+    description: Extra Packages for Enterprise Linux 7 - $basearch
+    # baseurl=http://download.fedoraproject.org/pub/epel/7/$basearch
+    metalink: https://mirrors.fedoraproject.org/metalink?repo=epel-7&arch=$basearch
+    gpgkey: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+    gpgcheck: true
+
+- name: Update Yum Cache
+  ansible.builtin.yum:
+    name: "*"
+    state: latest # noqa package-latest
+    skip_broken: true
+    update_cache: true
+
+- name: Base packages
+  ansible.builtin.yum:
+    name: "{{ packages }}"
+    state: latest # noqa package-latest
+  vars:
+    packages:
+      - ansible
+      - at
+      - bash-completion
+      - bash-completion-extras
+      - bind-utils
+      - bridge-utils
+      - bzip2
+      - chrony
+      - cloud-utils
+      - cloud-utils-growpart
+      - deltarpm
+      - genisoimage
+      - git
+      - hdparm
+      - htop
+      - ipmitool
+      - iptables-services
+      - jq
+      - libselinux-python
+      - mailx
+      - net-tools
+      - nfs-utils
+      - postgresql
+      - python3
+      - python3-pip
+      - rng-tools
+      - tmux
+      - vim
+      - wget
+
+- name: Enable rngd (Entropy) service
+  ansible.builtin.systemd:
+    name: rngd.service
+    state: restarted
+    enabled: true

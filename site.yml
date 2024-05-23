@@ -1,0 +1,7 @@
+---
+- name: Site
+  hosts: all
+  become: true
+  roles:
+    - linux_base
+    - geerlingguy.docker

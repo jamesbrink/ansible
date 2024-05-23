@@ -1,0 +1,11 @@
+# Ignore ansible collections
+collections/ansible_collections
+.vscode
+.DS_Store
+
+# Terraform
+.terraform/
+tfplan
+*.tfstate
+**/crash.log
+temp

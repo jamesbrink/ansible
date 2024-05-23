@@ -1,0 +1,240 @@
+---
+# - name: Get info
+#   ansible.builtin.debug:
+#     msg: "{{ ansible_architecture }}"
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ alternate_hostname | default(inventory_hostname) }}"
+
+# - name: Hosts | populate inventory into hosts file
+#   ansible.builtin.blockinfile:
+#     dest: /etc/hosts
+#     block: |-
+#       {% for item in groups['all'] %}
+#       {{ hostvars[item]['ip'] }} {{ item }}.{{ domain_name }} {{ item }}
+#       {% endfor %}
+#     state: present
+#     create: true
+#     backup: true
+#     marker: "# Ansible inventory hosts {mark}"
+#   when: populate_hostfiles
+
+# - name: Ensure hostname in /etc/hosts
+#   ansible.builtin.lineinfile:
+#     dest: /etc/hosts
+#     regexp: '^127\.0\.0\.1.*$'
+#     line: "127.0.0.1 localhost {{ alternate_hostname | default(inventory_hostname) }}"
+
+- name: Disable requiretty in sudo
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers
+    regexp: '^(Defaults\s+requiretty)$'
+    line: '# \1'
+    backrefs: true
+
+- name: Enable Sudo without password
+  ansible.builtin.lineinfile:
+    dest: /etc/sudoers
+    regexp: '^(Defaults\s+requiretty)$'
+    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
+
+- name: Ensure DNS is Disabled on SSH
+  ansible.builtin.lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: "^UseDNS.*$"
+    line: "UseDNS no"
+  register: ssh_dns
+  tags:
+    - ssh
+
+- name: Ensure RootLogin Disabled on SSH
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin.*$"
+    line: "PermitRootLogin no"
+  register: ssh_allow_root
+  tags:
+    - ssh
+
+- name: Reload sshd.service
+  ansible.builtin.systemd:
+    name: sshd.service
+    state: reloaded
+    enabled: true
+  when: ssh_dns.changed or ssh_allow_root.changed
+  tags:
+    - ssh
+
+- name: Ensure TimeZone
+  community.general.timezone:
+    name: "{{ linux_base_timezone }}"
+
+- name: CentOS 7 Linux
+  ansible.builtin.import_tasks: centos7.yml
+  when:
+    - ansible_facts['distribution'] == "CentOS"
+    - ansible_facts['distribution_major_version'] == "7"
+
+- name: CentOS 8 Linux
+  ansible.builtin.import_tasks: centos8.yml
+  when:
+    - ansible_facts['distribution'] == "CentOS"
+    - ansible_facts['distribution_major_version'] == "8"
+
+- name: Amazon Linux
+  ansible.builtin.import_tasks: amazon.yml
+  when:
+    - ansible_facts['distribution'] == "Amazon"
+
+- name: Ubuntu Linux
+  ansible.builtin.import_tasks: ubuntu.yml
+  when:
+    - ansible_facts['distribution'] == "Ubuntu"
+
+- name: Debian Linux
+  ansible.builtin.import_tasks: debian.yml
+  when:
+    - ansible_facts['distribution'] == "Debian"
+
+- name: Alama Linux
+  ansible.builtin.import_tasks: alamalinux.yml
+  when:
+    - ansible_facts['distribution'] == "AlmaLinux"
+
+- name: Ensure IPv6 is disabled
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Allow new incoming SYN packets on TCP port 22 (SSH).
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "22"
+    ctstate: NEW
+    syn: match
+    jump: ACCEPT
+    comment: Accept SSH connections.
+
+- name: Allow related and established connections
+  ansible.builtin.iptables:
+    chain: INPUT
+    ctstate: ESTABLISHED,RELATED
+    jump: ACCEPT
+
+- name: Allow ICMP packets.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: icmp
+    jump: ACCEPT
+    comment: Allow ICMP packets
+
+- name: Accept LoopBack connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    in_interface: lo
+    source: 127.0.0.1
+    destination: 127.0.0.1/8
+    jump: ACCEPT
+    comment: Accept LoopBack connections.
+
+- name: Accept node_exporter connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "9100"
+    jump: ACCEPT
+    comment: Accept node_exporter connections.
+
+- name: Accept blackbox_exporter connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "9115"
+    jump: ACCEPT
+    comment: Accept blackbox_exporter connections.
+
+- name: Accept iperf3 TCP connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "5201"
+    jump: ACCEPT
+    comment: Accept iperf3 TCP connections.
+
+- name: Accept iperf3 UDP connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "5201"
+    jump: ACCEPT
+    comment: Accept iperf3 UDP connections.
+
+- name: Accept XRDP connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "3389"
+    jump: ACCEPT
+    comment: Accept XRDP connections.
+
+- name: iptables Set the policy for the INPUT chain to DROP
+  ansible.builtin.iptables:
+    chain: INPUT
+    policy: DROP
+
+- name: Disable firewalld service
+  ansible.builtin.systemd:
+    name: firewalld.service
+    state: stopped
+    enabled: false
+    masked: true
+  ignore_errors: true
+  when:
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+
+- name: Save iptables rules
+  ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
+  when:
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+
+- name: Save iptables rules
+  ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
+  when:
+    - ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
+
+- name: Enable iptables service
+  ansible.builtin.systemd:
+    name: iptables.service
+    state: restarted
+    enabled: true
+  when:
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+
+- name: Enable iptables service
+  ansible.builtin.systemd:
+    name: netfilter-persistent.service
+    state: restarted
+    enabled: true
+  when:
+    - ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
+
+- name: Update fail2ban config
+  ansible.builtin.template:
+    src: etc/fail2ban/jail.local
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  register: fail2ban_config
+
+- name: Enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban.service
+    state: restarted
+    enabled: true
+  when: fail2ban_config.changed

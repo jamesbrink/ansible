@@ -1,0 +1,72 @@
+---
+- name: Ensure EPEL
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
+- name: Checking if reboot is needed
+  ansible.builtin.shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
+  ignore_errors: true
+  register: reboot_hint
+  changed_when: reboot_hint.stdout.find("reboot") != -1
+
+- name: Rebooting
+  ansible.builtin.reboot:
+  when: reboot_hint.stdout.find("reboot") != -1
+
+- name: Base packages
+  ansible.builtin.dnf:
+    name: "{{ packages }}"
+    state: latest # noqa package-latest
+  vars:
+    packages:
+      - bzip2
+      - chrony
+      - cloud-utils-growpart
+      - genisoimage
+      - git
+      - htop
+      - iperf3
+      - iptables-services
+      - jq
+      - nfs-utils
+      - nginx
+      - postgresql
+      - python3-libselinux
+      - python3-pip
+      - rng-tools
+      - tmux
+      - vim
+      - wget
+      - wireguard-tools
+      - xterm
+      - fail2ban
+
+- name: Install Desktop
+  ansible.builtin.dnf:
+    name: "@Server with GUI"
+    state: present
+
+- name: Install XRDP
+  ansible.builtin.dnf:
+    name: xrdp
+    enablerepo: epel
+    state: present
+
+- name: Enable XRDP service
+  ansible.builtin.systemd:
+    name: xrdp.service
+    state: started
+    enabled: true
+
+- name: Enable XRDP Session Manager service
+  ansible.builtin.systemd:
+    name: xrdp-sesman.service
+    state: started
+    enabled: true
+
+- name: Enable rngd (Entropy) service
+  ansible.builtin.systemd:
+    name: rngd.service
+    state: started
+    enabled: true
