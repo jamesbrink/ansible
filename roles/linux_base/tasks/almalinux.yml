@@ -23,6 +23,7 @@
       - bzip2
       - chrony
       - cloud-utils-growpart
+      - fail2ban
       - genisoimage
       - git
       - htop
@@ -35,12 +36,12 @@
       - python3-libselinux
       - python3-pip
       - rng-tools
+      - tigervnc-server
       - tmux
       - vim
       - wget
       - wireguard-tools
       - xterm
-      - fail2ban
 
 - name: Install Desktop
   ansible.builtin.dnf:
@@ -70,3 +71,19 @@
     name: rngd.service
     state: started
     enabled: true
+
+- name: Accept XRDP connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "3389"
+    jump: ACCEPT
+    comment: Accept XRDP connections.
+
+- name: Accept VNC connections.
+  ansible.builtin.iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "5901"
+    jump: ACCEPT
+    comment: Accept VNC connections.

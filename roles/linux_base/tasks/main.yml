@@ -102,13 +102,13 @@
   when:
     - ansible_facts['distribution'] == "AlmaLinux"
 
-- name: Ensure IPv6 is disabled
-  ansible.posix.sysctl:
-    name: net.ipv6.conf.all.disable_ipv6
-    value: "1"
-    sysctl_set: true
-    state: present
-    reload: true
+# - name: Ensure IPv6 is disabled
+#   ansible.posix.sysctl:
+#     name: net.ipv6.conf.all.disable_ipv6
+#     value: "1"
+#     sysctl_set: true
+#     state: present
+#     reload: true
 
 - name: Allow new incoming SYN packets on TCP port 22 (SSH).
   ansible.builtin.iptables:
@@ -174,14 +174,6 @@
     jump: ACCEPT
     comment: Accept iperf3 UDP connections.
 
-- name: Accept XRDP connections.
-  ansible.builtin.iptables:
-    chain: INPUT
-    protocol: tcp
-    destination_port: "3389"
-    jump: ACCEPT
-    comment: Accept XRDP connections.
-
 - name: iptables Set the policy for the INPUT chain to DROP
   ansible.builtin.iptables:
     chain: INPUT
@@ -193,35 +185,29 @@
     state: stopped
     enabled: false
     masked: true
-  ignore_errors: true
-  when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
+  when: ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
-  when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
+  when: ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
-  when:
-    - ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
+  when: ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
 
 - name: Enable iptables service
   ansible.builtin.systemd:
     name: iptables.service
     state: restarted
     enabled: true
-  when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
+  when: ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Enable iptables service
   ansible.builtin.systemd:
     name: netfilter-persistent.service
     state: restarted
     enabled: true
-  when:
-    - ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
+  when: ansible_facts['distribution'] == "Ubuntu" or ansible_facts['distribution'] == "Debian"
 
 - name: Update fail2ban config
   ansible.builtin.template:
