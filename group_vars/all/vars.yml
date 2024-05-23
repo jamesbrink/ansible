@@ -1,3 +1,2 @@
 ---
 ansible_user: jamesbrink
-use_iptables: true

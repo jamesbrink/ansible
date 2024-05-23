@@ -98,7 +98,7 @@
     - ansible_facts['distribution'] == "Debian"
 
 - name: Alama Linux
-  ansible.builtin.import_tasks: alamalinux.yml
+  ansible.builtin.import_tasks: almalinux.yml
   when:
     - ansible_facts['distribution'] == "AlmaLinux"
 
@@ -195,12 +195,12 @@
     masked: true
   ignore_errors: true
   when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
   when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
@@ -213,7 +213,7 @@
     state: restarted
     enabled: true
   when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlamaLinux"
+    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Enable iptables service
   ansible.builtin.systemd:

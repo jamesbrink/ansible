@@ -5,3 +5,4 @@
   roles:
     - linux_base
     - geerlingguy.docker
+    - monitoring

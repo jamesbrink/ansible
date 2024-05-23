@@ -6,7 +6,6 @@
     destination_port: "9116"
     jump: ACCEPT
     comment: Accept snmp_exporter connections.
-  when: use_iptables
 
 - name: Accept blackbox_exporter connections.
   ansible.builtin.iptables:
@@ -15,7 +14,6 @@
     destination_port: "9115"
     jump: ACCEPT
     comment: Accept blackbox_exporter connections.
-  when: use_iptables
 
 - name: Accept prometheus connections.
   ansible.builtin.iptables:
@@ -24,7 +22,6 @@
     destination_port: "9090"
     jump: ACCEPT
     comment: Accept prometheus connections.
-  when: use_iptables
 
 - name: Accept alertmanager connections.
   ansible.builtin.iptables:
@@ -33,7 +30,6 @@
     destination_port: "9093"
     jump: ACCEPT
     comment: Accept alertmanager connections.
-  when: use_iptables
 
 - name: Accept cAdvisor connections.
   ansible.builtin.iptables:
@@ -42,7 +38,6 @@
     destination_port: "8080"
     jump: ACCEPT
     comment: Accept cAdvisor connections.
-  when: use_iptables
 
 - name: Accept grafana connections.
   ansible.builtin.iptables:
@@ -51,7 +46,6 @@
     destination_port: "{{ grafana_port | default('3000') }}"
     jump: ACCEPT
     comment: Accept grafana connections.
-  when: use_iptables
 
 - name: Accept OpenSearch Dashboard connections.
   ansible.builtin.iptables:
@@ -60,7 +54,6 @@
     destination_port: "5601"
     jump: ACCEPT
     comment: Accept OpenSearch Dashboard connections.
-  when: use_iptables
 
 - name: Accept OpenSearch REST API connections.
   ansible.builtin.iptables:
@@ -69,7 +62,6 @@
     destination_port: "9200"
     jump: ACCEPT
     comment: Accept OpenSearch REST API connections.
-  when: use_iptables
 
 - name: Accept OpenSearch Cross-cluster search connections.
   ansible.builtin.iptables:
@@ -78,7 +70,6 @@
     destination_port: "9250"
     jump: ACCEPT
     comment: Accept OpenSearch Cross-cluster search connections.
-  when: use_iptables
 
 - name: Accept OpenSearch Node communication and transport connections.
   ansible.builtin.iptables:
@@ -87,7 +78,6 @@
     destination_port: "9300"
     jump: ACCEPT
     comment: Accept OpenSearch Node communication and transport connections.
-  when: use_iptables
 
 - name: Accept OpenSearchPerformance Analyzer connections.
   ansible.builtin.iptables:
@@ -96,16 +86,11 @@
     destination_port: "9600"
     jump: ACCEPT
     comment: Accept OpenSearch Performance Analyzer connections.
-  when: use_iptables
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
-  when:
-    - ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon"
-    - use_iptables
+  when: ansible_facts['distribution'] == "CentOS" or ansible_facts['distribution'] == "Amazon" or ansible_facts['distribution'] == "AlmaLinux"
 
 - name: Save iptables rules
   ansible.builtin.shell: iptables-save > /etc/iptables/rules.v4
-  when:
-    - ansible_facts['distribution'] == "Ubuntu"
-    - use_iptables
+  when: ansible_facts['distribution'] == "Ubuntu"
